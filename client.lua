@@ -14,7 +14,10 @@ local _state = 0
 local _divingCrates = {}
 local isEquiped = false
 
+
+-- Setup event
 AddEventHandler("Labor:Client:Setup", function()
+    -- Ped to start job
     PedInteraction:Add("DivingJob", `s_m_y_uscg_01`, vector3(-1799.363, -1224.240, 0.596), 143.265, 25.0, {
         {
             icon = "clipboard",
@@ -42,6 +45,11 @@ AddEventHandler("Labor:Client:Setup", function()
     }, 'person-swimming', 'WORLD_HUMAN_CLIPBOARD')
 end)
 
+------------
+-- Functions
+------------
+
+-- Progress bar for opening crates
 local _doing = false
 function DoDiveAction(id)
     Progress:ProgressWithTickEvent({
@@ -75,6 +83,72 @@ function DoDiveAction(id)
         end
     end)
 end
+
+-- Function to delete diving crates
+function DeleteDivingCrates()
+    if _divingCrates[_joiner] then
+        for _, crate in pairs(_divingCrates[_joiner]) do
+            if DoesEntityExist(crate) then
+                DeleteObject(crate)
+            end
+        end
+        _divingCrates[_joiner] = nil
+    end
+end
+
+-- Function to spawn dynamic crate prop
+function SpawnDiveObject(model, coords, cb)
+    local model = (type(model) == 'number' and model or GetHashKey(model))
+    RequestModel(model)
+    while not HasModelLoaded(model) do
+        Wait(1)
+    end
+    coords = vector3(coords.x, coords.y, coords.z)
+    local obj = CreateObject(model, coords.x, coords.y, coords.z, false, false, true)
+    SetModelAsNoLongerNeeded(model)
+    PlaceObjectOnGroundProperly(obj)
+    FreezeEntityPosition(obj, true)
+    if cb then
+        cb(obj)
+    end
+end
+
+-- Function to spawn tier 1 crates
+function SpawnRegDivingCrates(nodes, joiner)
+    _divingCrates[joiner] = {}
+    for _, location in ipairs(nodes) do
+        Wait(1)
+        SpawnDiveObject('sm_prop_smug_crate_s_bones', location.coords, function(obj)
+            table.insert(_divingCrates[joiner], obj)
+        end)
+    end
+end
+
+-- Function to spawn tier 2 crates
+function SpawnMidDivingCrates2(nodes, joiner)
+    _divingCrates[joiner] = {}
+    for _, location in ipairs(nodes) do
+        Wait(1)
+        SpawnDiveObject('ba_prop_battle_antique_box', location.coords, function(obj)
+            table.insert(_divingCrates[joiner], obj)
+        end)
+    end
+end
+
+-- Function to spawn tier 3 crates
+function SpawnMidDivingCrates3(nodes, joiner)
+    _divingCrates[joiner] = {}
+    for _, location in ipairs(nodes) do
+        Wait(1)
+        SpawnDiveObject('sm_prop_smug_crate_s_jewellery', location.coords, function(obj)
+            table.insert(_divingCrates[joiner], obj)
+        end)
+    end
+end
+
+------------------
+-- Events/Handlers
+------------------
 
 RegisterNetEvent("Diving:Client:OnDuty", function(joiner, time)
     _joiner = joiner
@@ -212,108 +286,4 @@ RegisterNetEvent("Diving:Client:OffDuty", function(time)
     _blips = {}
     eventHandlers = {}
     _nodes = nil
-end)
-
-function DeleteDivingCrates()
-    if _divingCrates[_joiner] then
-        for _, crate in pairs(_divingCrates[_joiner]) do
-            if DoesEntityExist(crate) then
-                DeleteObject(crate)
-            end
-        end
-        _divingCrates[_joiner] = nil
-    end
-end
-
--- DIVING ZONE 1 --
-function SpawnDiveObject(model, coords, cb)
-    local model = (type(model) == 'number' and model or GetHashKey(model))
-    RequestModel(model)
-    while not HasModelLoaded(model) do
-        Wait(1)
-    end
-    coords = vector3(coords.x, coords.y, coords.z)
-    local obj = CreateObject(model, coords.x, coords.y, coords.z, false, false, true)
-    SetModelAsNoLongerNeeded(model)
-    PlaceObjectOnGroundProperly(obj)
-    FreezeEntityPosition(obj, true)
-    if cb then
-        cb(obj)
-    end
-end
-
-function SpawnRegDivingCrates(nodes, joiner)
-    _divingCrates[joiner] = {}
-    for _, location in ipairs(nodes) do
-        Wait(1)
-        SpawnDiveObject('sm_prop_smug_crate_s_bones', location.coords, function(obj)
-            table.insert(_divingCrates[joiner], obj)
-        end)
-    end
-end
-
-function SpawnMidDivingCrates2(nodes, joiner)
-    _divingCrates[joiner] = {}
-    for _, location in ipairs(nodes) do
-        Wait(1)
-        SpawnDiveObject('ba_prop_battle_antique_box', location.coords, function(obj)
-            table.insert(_divingCrates[joiner], obj)
-        end)
-    end
-end
-
-function SpawnMidDivingCrates3(nodes, joiner)
-    _divingCrates[joiner] = {}
-    for _, location in ipairs(nodes) do
-        Wait(1)
-        SpawnDiveObject('sm_prop_smug_crate_s_jewellery', location.coords, function(obj)
-            table.insert(_divingCrates[joiner], obj)
-        end)
-    end
-end
-
--- Check height coords
-function GetCoordZCrate(x, y)
-    for height = 1, 1000 do
-        local foundGround, zPos = GetGroundZFor_3dCoord(x, y, height + 0.0)
-        if foundGround then
-            return zPos
-        end
-    end
-end
-
--- Deletes the spawned crates on stop
-AddEventHandler('onResourceStop', function(resource)
-	if resource == GetCurrentResourceName() then
-		for k, v in pairs(divingCrate2) do
-			DeleteObject(v)
-		end
-	end
-end)
-
--- Deletes the spawned crates on stop
-AddEventHandler('onResourceStop', function(resource)
-	if resource == GetCurrentResourceName() then
-		for k, v in pairs(divingCrate) do
-			DeleteObject(v)
-		end
-	end
-end)
-
--- Deletes the spawned crates on stop
-AddEventHandler('onResourceStop', function(resource)
-	if resource == GetCurrentResourceName() then
-		for k, v in pairs(divingCrate3) do
-			DeleteObject(v)
-		end
-	end
-end)
-
--- Deletes the spawned crates on stop
-AddEventHandler('onResourceStop', function(resource)
-	if resource == GetCurrentResourceName() then
-		for k, v in pairs(divingCrate4) do
-			DeleteObject(v)
-		end
-	end
 end)
