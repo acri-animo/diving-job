@@ -1,9 +1,10 @@
 local _JOB = "Diving"
 local _joiners = {}
 local _diving = {}
-local _usedLocationSets = {}  -- Track used location sets
+local _usedLocationSets = {}
 local boxType = nil
 
+-- Startup event
 AddEventHandler("Labor:Server:Startup", function()
     Reputation:Create("Diving", "Diving", {
         { label = "Rank 1", value = 1000 },
@@ -18,43 +19,44 @@ AddEventHandler("Labor:Server:Startup", function()
         { label = "Rank 10", value = 100000 },
     }, false)
 
-    -- Start Job --
+    -- Callback to start job
     Callbacks:RegisterServerCallback("Diving:StartJob", function(source, data, cb)
         if _diving[data] ~= nil and _diving[data].state == 0 then
             _diving[data].state = 1
             _diving[data].tasks = 0
             _diving[data].job = deepcopy(availableDiveJobs[1])
     
+            -- Determine box type based on chance and reputation (based on group leader)
             local divingRep = Reputation:GetLevel(source, "Diving") or 0
             local boxType
     
             if divingRep >= 8 then -- Rank 8-10
                 local rand = math.random(1, 100)
                 if rand <= 50 then
-                    boxType = "regular"      -- 50% chance
+                    boxType = "regular" -- 50% chance
                 elseif rand <= 80 then
-                    boxType = "antique"      -- 30% chance
+                    boxType = "antique" -- 30% chance
                 elseif rand <= 100 then
-                    boxType = "jewellery"    -- 20% chance
+                    boxType = "jewellery" -- 20% chance
                 end
             elseif divingRep >= 6 and divingRep < 8 then -- Rank 6-7
                 local rand = math.random(1, 100)
                 if rand <= 50 then
-                    boxType = "regular"      -- 50% chance
+                    boxType = "regular" -- 50% chance
                 elseif rand <= 80 then
-                    boxType = "antique"      -- 30% chance
+                    boxType = "antique" -- 30% chance
                 elseif rand <= 100 then
-                    boxType = "jewellery"    -- 20% chance
+                    boxType = "jewellery" -- 20% chance
                 end
             elseif divingRep >= 3 and divingRep < 6 then -- Rank 3-5
                 local rand = math.random(1, 100)
                 if rand <= 50 then
-                    boxType = "regular"      -- 50% chance
+                    boxType = "regular" -- 50% chance
                 elseif rand <= 80 then
-                    boxType = "antique"      -- 30% chance
+                    boxType = "antique" -- 30% chance
                 end
             elseif divingRep < 3 then -- Rank 1-2
-                boxType = "regular"          -- 100% chance for regular
+                boxType = "regular" -- 100% chance for regular
             end
     
             _diving[_joiners[source]].boxType = boxType
@@ -97,7 +99,7 @@ AddEventHandler("Labor:Server:Startup", function()
         end
     end)    
 
-    -- When a node is completed --
+    -- Callback to open crate
     Callbacks:RegisterServerCallback("Diving:CompleteNode", function(source, data, cb)
         local char = Fetch:CharacterSource(source)
         local playerSID = char:GetData("SID")
@@ -108,6 +110,7 @@ AddEventHandler("Labor:Server:Startup", function()
             for k, v in ipairs(divingSession.nodes) do
                 if v.id == data then
                     nodeFound = true
+                    -- Calculate rewards based on diving reputation and box type
                     local divingRep = Reputation:GetLevel(source, "Diving")
                     local multiplier = 1 + (divingRep * 0.1)
                     local boxType = divingSession.boxType
@@ -151,7 +154,7 @@ AddEventHandler("Labor:Server:Startup", function()
         end
     end)    
 
-    -- Turn In Job
+    -- Callback to turn in/complete job
     Callbacks:RegisterServerCallback("Diving:TurnIn", function(source, data, cb)
         if _joiners[source] ~= nil and _diving[_joiners[source]].tasks == 1 then
             local divingSession = _diving[_joiners[source]]
@@ -172,6 +175,10 @@ AddEventHandler("Labor:Server:Startup", function()
         end
     end)
 end)
+
+------------------
+-- Events/Handlers
+------------------
 
 AddEventHandler("Diving:Server:OnDuty", function(joiner, members, isWorkgroup)
     _joiners[joiner] = joiner
@@ -221,6 +228,7 @@ AddEventHandler("Diving:Server:FinishJob", function(joiner)
     end
 end)
 
+-- Buy scuba gear from job ped (this is independent of the diving job)
 RegisterNetEvent("Diving:BuyScuba")
 AddEventHandler("Diving:BuyScuba", function()
     local char = Fetch:CharacterSource(source)
